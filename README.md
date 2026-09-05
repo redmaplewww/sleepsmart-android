@@ -30,6 +30,12 @@ APK 输出：`app/build/outputs/apk/debug/app-debug.apk`。
 
 华为健康真实数据适配器尚未随本仓库宣称完成：它需要 HMS Health Kit 的开发者准入、应用签名和用户授权，并应在真机上单独验收。没有真实阶段数据时，应用明确使用虚拟数据演示，不把演示结果当作医疗判断。
 
+## 界面预览
+
+| 睡眠分析 | 智能闹钟 |
+| --- | --- |
+| ![睡眠分析界面](docs/screenshots/sleep-analysis.png) | ![智能闹钟界面](docs/screenshots/smart-alarm.png) |
+
 ## 贡献
 
 欢迎提交 Issue 或 Pull Request。涉及睡眠阶段算法、设备接入和闹钟行为的改动，请同时说明数据来源、测试设备和已知限制。
