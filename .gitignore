@@ -1,0 +1,22 @@
+.gradle/
+.idea/
+**/build/
+build/
+local.properties
+
+# Local credentials and machine-specific configuration
+.env
+.env.*
+!.env.example
+
+# Dependency caches and generated frontend artifacts
+mobile-app/node_modules/
+mobile-app/dist/
+
+# Private design-call logs, temporary exports, and review images
+outputs/
+
+# IDE and OS noise
+*.iml
+.DS_Store
+Thumbs.db

@@ -1,0 +1,239 @@
+package com.example.sleepsmart
+
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.app.TimePickerDialog
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import android.os.Bundle
+import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Alarm
+import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import kotlin.math.PI
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
+
+private data class DawnPalette(val canvas: Color, val text: Color, val muted: Color, val rule: Color, val deep: Color, val light: Color, val rem: Color, val sage: Color, val alert: Color)
+private val Dawn = DawnPalette(Color(0xFFF7F6F2), Color(0xFF1E2022), Color(0xFF686E74), Color(0xFFE1DFD8), Color(0xFF324B66), Color(0xFF7E99B4), Color(0xFFD48B70), Color(0xFF3B6E57), Color(0xFF8A5D3B))
+private val LocalDawn = staticCompositionLocalOf { Dawn }
+private val PageInset = 22.dp
+private enum class AppScreen { ANALYSIS, ALARM }
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); setContent { SleepTheme { SleepSmartApp() } } }
+}
+
+@Composable private fun SleepTheme(content: @Composable () -> Unit) {
+    val c = Dawn
+    CompositionLocalProvider(LocalDawn provides c) {
+        MaterialTheme(colorScheme = lightColorScheme(background = c.canvas, surface = c.canvas, onSurface = c.text, primary = c.sage, outline = c.rule), typography = MaterialTheme.typography.copy(headlineLarge = MaterialTheme.typography.headlineLarge.copy(fontFamily = FontFamily.Serif, fontWeight = FontWeight.Normal), headlineMedium = MaterialTheme.typography.headlineMedium.copy(fontFamily = FontFamily.Serif, fontWeight = FontWeight.Normal)), content = content)
+    }
+}
+
+@Composable private fun SleepSmartApp() {
+    var screen by rememberSaveable { mutableStateOf(AppScreen.ANALYSIS) }
+    var targetHour by rememberSaveable { mutableIntStateOf(7) }
+    var targetMinute by rememberSaveable { mutableIntStateOf(30) }
+    var earlyMinutes by rememberSaveable { mutableIntStateOf(30) }
+    var lateMinutes by rememberSaveable { mutableIntStateOf(30) }
+    var alarmEnabled by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
+    val target = remember(targetHour, targetMinute) { targetCalendar(targetHour, targetMinute) }
+    val segments = remember(targetHour, targetMinute) { VirtualSleepData.lastNight(target) }
+    val result = remember(segments, earlyMinutes) { SleepAnalyzer.recommend(segments, target.time, earlyMinutes) }
+    val recommended = remember(result, lateMinutes) { val latest = target.timeInMillis + lateMinutes * 60_000L; if (result.alarm.time > latest) target.time else result.alarm }
+    Scaffold(containerColor = Dawn.canvas, contentWindowInsets = WindowInsets.navigationBars) { insets ->
+        Column(Modifier.fillMaxSize().background(Dawn.canvas).padding(insets)) {
+            Masthead(screen) { screen = it }
+            when (screen) {
+                AppScreen.ANALYSIS -> AnalysisScreen(result, segments) { screen = AppScreen.ALARM }
+                AppScreen.ALARM -> AlarmScreen(targetHour, targetMinute, earlyMinutes, lateMinutes, result, recommended, alarmEnabled, { targetHour = it.first; targetMinute = it.second }, { targetHour = it / 60; targetMinute = it % 60 }, { earlyMinutes = it }, { lateMinutes = it }, { scheduleAlarm(context, recommended); alarmEnabled = true })
+            }
+        }
+    }
+}
+
+@Composable private fun Masthead(selected: AppScreen, onSelect: (AppScreen) -> Unit) {
+    val c = LocalDawn.current
+    Row(Modifier.fillMaxWidth().padding(horizontal = PageInset, vertical = 17.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) { Icon(Icons.Rounded.Bedtime, contentDescription = null, tint = c.sage, modifier = Modifier.size(19.dp)); Spacer(Modifier.width(8.dp)); Text("轻醒", fontSize = 20.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp) }
+        Column(horizontalAlignment = Alignment.End) { Text("华为运动健康", color = c.muted, style = MaterialTheme.typography.labelSmall); Text("● 已同步", color = c.sage, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold) }
+    }
+    Row(Modifier.fillMaxWidth().padding(horizontal = PageInset), horizontalArrangement = Arrangement.spacedBy(28.dp)) { EditorialTab("01", "睡眠状况", selected == AppScreen.ANALYSIS, Modifier.weight(1f)) { onSelect(AppScreen.ANALYSIS) }; EditorialTab("02", "智能闹钟", selected == AppScreen.ALARM, Modifier.weight(1f)) { onSelect(AppScreen.ALARM) } }
+    HorizontalDivider(color = c.rule)
+}
+
+@Composable private fun EditorialTab(index: String, label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    val c = LocalDawn.current
+    Column(modifier.fillMaxWidth().padding(top = 9.dp).clickable(role = Role.Tab, onClick = onClick).semantics { contentDescription = label }) { Text(index, color = if (selected) c.sage else c.muted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold); Spacer(Modifier.height(3.dp)); Text(label, color = if (selected) c.text else c.muted, style = MaterialTheme.typography.bodyMedium, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal); Spacer(Modifier.height(10.dp)); Box(Modifier.fillMaxWidth().height(2.dp).background(if (selected) c.sage else Color.Transparent)) }
+}
+
+@Composable private fun AnalysisScreen(result: SleepAnalyzer.Result, segments: List<SleepAnalyzer.Segment>, onAlarm: () -> Unit) {
+    val c = LocalDawn.current
+    LazyColumn(Modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = PageInset, vertical = 20.dp), verticalArrangement = Arrangement.spacedBy(21.dp)) {
+        item { Text("昨晚 · ${SimpleDateFormat("MM月dd日", Locale.getDefault()).format(result.sleepEnd)}", color = c.muted, style = MaterialTheme.typography.labelMedium); Spacer(Modifier.height(6.dp)); Row(verticalAlignment = Alignment.Bottom) { Column(Modifier.weight(1f)) { Text("自然醒来", color = c.sage, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold); Text(formatClock(result.alarm), fontSize = 54.sp, lineHeight = 58.sp, fontWeight = FontWeight.Bold) }; Column(horizontalAlignment = Alignment.End) { Text(formatDuration(result.sleepMinutes), fontSize = 25.sp, fontWeight = FontWeight.Bold); Text("总睡眠", color = c.muted, style = MaterialTheme.typography.labelSmall) } }; Spacer(Modifier.height(12.dp)); HorizontalDivider(color = c.rule) }
+        item { SleepStageChart(segments, result.alarm) }
+        item { MetricGrid(result) }
+        item { HorizontalDivider(color = c.rule); Spacer(Modifier.height(17.dp)); Row(verticalAlignment = Alignment.Top) { Text("${result.cycles}", fontSize = 45.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(76.dp)); Column { Text("个完整睡眠周期", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold); Spacer(Modifier.height(4.dp)); Text("NREM → REM 的节律弧线完整，夜间恢复信号稳定。", color = c.muted, style = MaterialTheme.typography.bodySmall) } } }
+        item { HorizontalDivider(color = c.rule); Spacer(Modifier.height(15.dp)); Text("今晚的下一步", color = c.muted, style = MaterialTheme.typography.labelMedium); Spacer(Modifier.height(6.dp)); Text("把闹钟交给睡眠窗口，优先在浅睡或 REM 叫醒。", style = MaterialTheme.typography.bodyLarge); Spacer(Modifier.height(15.dp)); Button(onClick = onAlarm, modifier = Modifier.fillMaxWidth().height(56.dp), shape = RectangleShape, colors = ButtonDefaults.buttonColors(containerColor = c.sage, contentColor = c.canvas), elevation = null) { Text("设置智能闹钟", fontWeight = FontWeight.Bold); Spacer(Modifier.width(8.dp)); Icon(Icons.Rounded.Alarm, contentDescription = null, modifier = Modifier.size(18.dp)) } }
+    }
+}
+
+@Composable private fun SleepStageChart(segments: List<SleepAnalyzer.Segment>, alarm: Date) {
+    val c = LocalDawn.current
+    Column(Modifier.semantics(mergeDescendants = true) { contentDescription = "睡眠阶段时间轴，推荐唤醒时间 ${formatClock(alarm)}" }) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(SimpleDateFormat("HH:mm", Locale.getDefault()).format(segments.first().start), color = c.muted, style = MaterialTheme.typography.labelSmall); Text("推荐 ${formatClock(alarm)}", color = c.sage, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold); Text(SimpleDateFormat("HH:mm", Locale.getDefault()).format(segments.last().end), color = c.muted, style = MaterialTheme.typography.labelSmall) }
+        Spacer(Modifier.height(8.dp))
+        Canvas(Modifier.fillMaxWidth().height(132.dp)) {
+            val total = segments.sumOf { (it.end.time - it.start.time).coerceAtLeast(0L) }.toFloat().coerceAtLeast(1f); var x = 0f; val baseline = size.height * .82f
+            drawLine(c.rule, Offset(0f, baseline), Offset(size.width, baseline), 1.dp.toPx()); repeat(7) { tick -> val tx = size.width * tick / 6f; drawLine(c.rule.copy(alpha = .6f), Offset(tx, 0f), Offset(tx, baseline), 1.dp.toPx()) }
+            segments.forEach { segment -> val width = size.width * ((segment.end.time - segment.start.time).coerceAtLeast(0L) / total); val top = when (segment.stage) { SleepAnalyzer.Stage.DEEP -> size.height * .15f; SleepAnalyzer.Stage.REM -> size.height * .34f; SleepAnalyzer.Stage.LIGHT -> size.height * .51f; else -> size.height * .67f }; val color = when (segment.stage) { SleepAnalyzer.Stage.DEEP -> c.deep; SleepAnalyzer.Stage.REM -> c.rem; SleepAnalyzer.Stage.LIGHT -> c.light; else -> c.muted }; drawRect(color, Offset(x, top), Size(width.coerceAtLeast(2f), baseline - top)); x += width }
+            val wakeFraction = (alarm.time - segments.first().start.time).toFloat() / (segments.last().end.time - segments.first().start.time).coerceAtLeast(1L); val wakeX = (size.width * wakeFraction).coerceIn(0f, size.width); drawLine(c.sage, Offset(wakeX, 0f), Offset(wakeX, baseline + 8.dp.toPx()), 2.dp.toPx(), cap = StrokeCap.Round); drawCircle(c.sage, 4.dp.toPx(), Offset(wakeX, baseline))
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(17.dp)) { ChartKey("深睡", c.deep); ChartKey("浅睡", c.light); ChartKey("REM", c.rem) }
+    }
+}
+
+@Composable private fun ChartKey(label: String, color: Color) { Row(verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(8.dp).clip(CircleShape).background(color)); Spacer(Modifier.width(5.dp)); Text(label, color = LocalDawn.current.muted, style = MaterialTheme.typography.labelSmall) } }
+
+@Composable private fun MetricGrid(result: SleepAnalyzer.Result) {
+    val c = LocalDawn.current
+    Row(Modifier.fillMaxWidth().height(73.dp).semantics(mergeDescendants = true) { contentDescription = "深睡 ${formatDuration(result.deepMinutes)}，快速眼动 ${formatDuration(result.remMinutes)}，浅睡 ${formatDuration(result.lightMinutes)}" }) { MetricCell("深睡", formatDuration(result.deepMinutes), c.deep, Modifier.weight(1f)); VerticalRule(); MetricCell("REM", formatDuration(result.remMinutes), c.rem, Modifier.weight(1f)); VerticalRule(); MetricCell("浅睡", formatDuration(result.lightMinutes), c.light, Modifier.weight(1f)) }
+}
+@Composable private fun VerticalRule() { Box(Modifier.padding(vertical = 4.dp).width(1.dp).fillMaxSize().background(LocalDawn.current.rule)) }
+@Composable private fun MetricCell(label: String, value: String, color: Color, modifier: Modifier) { Column(modifier.padding(horizontal = 11.dp)) { Box(Modifier.width(24.dp).height(3.dp).background(color)); Spacer(Modifier.height(8.dp)); Text(value, fontWeight = FontWeight.Bold, fontSize = 15.sp); Spacer(Modifier.height(2.dp)); Text(label, color = LocalDawn.current.muted, style = MaterialTheme.typography.labelSmall) } }
+
+@Composable private fun AlarmScreen(targetHour: Int, targetMinute: Int, earlyMinutes: Int, lateMinutes: Int, result: SleepAnalyzer.Result, recommended: Date, alarmEnabled: Boolean, onPickTime: (Pair<Int, Int>) -> Unit, onTargetChange: (Int) -> Unit, onEarlyChange: (Int) -> Unit, onLateChange: (Int) -> Unit, onToggle: () -> Unit) {
+    val c = LocalDawn.current; val context = LocalContext.current; val targetTotal = targetHour * 60 + targetMinute
+    LazyColumn(Modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = PageInset, vertical = 20.dp), verticalArrangement = Arrangement.spacedBy(19.dp)) {
+        item { Text("智能闹钟", color = c.muted, style = MaterialTheme.typography.labelMedium); Spacer(Modifier.height(5.dp)); Text("在更浅的睡眠里醒来", style = MaterialTheme.typography.headlineMedium); Spacer(Modifier.height(12.dp)); HorizontalDivider(color = c.rule) }
+        item { Text("唤醒范围", color = c.muted, style = MaterialTheme.typography.labelMedium); Spacer(Modifier.height(5.dp)); Text("${formatTimeFromMinutes(targetTotal - earlyMinutes)} — ${formatTimeFromMinutes(targetTotal + lateMinutes)}", fontSize = 34.sp, fontWeight = FontWeight.Bold, letterSpacing = .5.sp); Row(verticalAlignment = Alignment.CenterVertically) { Text("推荐 ${formatClock(recommended)}", color = c.sage, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold); Spacer(Modifier.width(9.dp)); Text("· 轻醒窗口", color = c.muted, style = MaterialTheme.typography.bodySmall) } }
+        item { DialClock(targetTotal, earlyMinutes, lateMinutes, onTargetChange, onEarlyChange, onLateChange); Text("拖动实心指针调整目标时间；拖动两侧空心指针扩大或收窄唤醒范围。", color = c.muted, style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth().padding(top = 8.dp), textAlign = TextAlign.Center) }
+        item { HorizontalDivider(color = c.rule); Spacer(Modifier.height(15.dp)); Row(verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text("目标起床", color = c.muted, style = MaterialTheme.typography.labelMedium); Spacer(Modifier.height(3.dp)); Text(formatTimeFromMinutes(targetTotal), fontSize = 29.sp, fontWeight = FontWeight.Bold) }; TextButton(onClick = { TimePickerDialog(context, { _, h, m -> onPickTime(h to m) }, targetHour, targetMinute, true).show() }, modifier = Modifier.height(48.dp)) { Icon(Icons.Rounded.Edit, contentDescription = null, modifier = Modifier.size(17.dp)); Spacer(Modifier.width(6.dp)); Text("手动设置", color = c.sage, fontWeight = FontWeight.Bold) } } }
+        item { HorizontalDivider(color = c.rule); Spacer(Modifier.height(15.dp)); Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("提前 ${earlyMinutes} 分钟", color = c.muted, style = MaterialTheme.typography.bodyMedium); Text("延后 ${lateMinutes} 分钟", color = c.muted, style = MaterialTheme.typography.bodyMedium) }; Spacer(Modifier.height(8.dp)); RangeScrubber(earlyMinutes, lateMinutes, onEarlyChange, onLateChange) }
+        item { HorizontalDivider(color = c.rule); Spacer(Modifier.height(15.dp)); Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Rounded.Info, contentDescription = null, tint = c.alert, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(7.dp)); Text(result.reason, color = c.muted, style = MaterialTheme.typography.bodySmall) }; Spacer(Modifier.height(13.dp)); Button(onClick = onToggle, modifier = Modifier.fillMaxWidth().height(56.dp), shape = RectangleShape, colors = ButtonDefaults.buttonColors(containerColor = if (alarmEnabled) c.sage else c.text, contentColor = c.canvas), elevation = null) { Icon(if (alarmEnabled) Icons.Rounded.Check else Icons.Rounded.Alarm, contentDescription = null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text(if (alarmEnabled) "智能闹钟已开启" else "开启智能闹钟", fontWeight = FontWeight.Bold) }; Text(if (alarmEnabled) "闹钟只在本机触发 · 再次点击可更新" else "阶段数据来自华为运动健康 · 闹钟只在本机触发", color = c.muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 7.dp)) }
+    }
+}
+
+@Composable private fun DialClock(targetTotal: Int, early: Int, late: Int, onTarget: (Int) -> Unit, onEarly: (Int) -> Unit, onLate: (Int) -> Unit) {
+    val c = LocalDawn.current; val density = LocalDensity.current; val dialDp = minOf(330.dp, 1000.dp); val dialPx = with(density) { dialDp.toPx() }; val start = normalizedMinutes(targetTotal - early); val end = normalizedMinutes(targetTotal + late)
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.size(dialDp).semantics { contentDescription = "圆盘闹钟，目标 ${formatTimeFromMinutes(targetTotal)}，提前 ${early} 分钟，延后 ${late} 分钟" }.pointerInput(targetTotal, early, late) {
+            var active = "target"
+            detectDragGestures(onDragStart = { point ->
+                val center = Offset(dialPx / 2f, dialPx / 2f); val threshold = with(density) { 39.dp.toPx() }; val candidates = listOf("start" to pointForMinutes(start, center, dialPx * .36f), "target" to pointForMinutes(targetTotal, center, dialPx * .36f), "end" to pointForMinutes(end, center, dialPx * .36f)); active = candidates.minBy { distance(it.second, point) }.let { if (distance(it.second, point) <= threshold) it.first else "target" }
+            }, onDrag = { change, _ ->
+                val center = Offset(dialPx / 2f, dialPx / 2f); val minute = minuteForPoint(change.position, center); when (active) { "start" -> onEarly(((targetTotal - minute + 1440) % 1440).coerceIn(5, 90)); "end" -> onLate(((minute - targetTotal + 1440) % 1440).coerceIn(5, 90)); else -> onTarget(minute) }; change.consume()
+            })
+        }) {
+            val center = Offset(size.width / 2f, size.height / 2f); val radius = size.minDimension * .41f
+            drawCircle(c.rule, radius, center, style = Stroke(width = 1.dp.toPx()))
+            val windowStartAngle = start / 1440f * 360f - 90f
+            val windowSweep = (early + late).coerceAtMost(720) / 1440f * 360f
+            drawArc(c.sage.copy(alpha = .18f), windowStartAngle, windowSweep, false, center - Offset(radius, radius), Size(radius * 2, radius * 2), style = Stroke(18.dp.toPx(), cap = StrokeCap.Round))
+            for (tick in 0 until 24) { val angle = tick * 2f * PI.toFloat() / 24f - PI.toFloat() / 2f; val outer = pointForAngle(angle, center, radius + 7.dp.toPx()); val inner = pointForAngle(angle, center, radius - if (tick % 6 == 0) 14.dp.toPx() else 7.dp.toPx()); drawLine(if (tick % 6 == 0) c.text else c.rule, inner, outer, if (tick % 6 == 0) 2.dp.toPx() else 1.dp.toPx(), cap = StrokeCap.Round) }
+            listOf(start to c.light, targetTotal to c.sage, end to c.rem).forEachIndexed { index, item -> val p = pointForMinutes(item.first, center, radius); val inner = pointForMinutes(item.first, center, radius * .55f); drawLine(item.second, center, inner, if (index == 1) 3.dp.toPx() else 2.dp.toPx(), cap = StrokeCap.Round); drawLine(item.second, inner, p, if (index == 1) 3.dp.toPx() else 2.dp.toPx(), cap = StrokeCap.Round); if (index == 1) { drawCircle(item.second, 9.dp.toPx(), p); drawCircle(c.canvas, 4.dp.toPx(), p) } else { drawCircle(c.canvas, 9.dp.toPx(), p); drawCircle(item.second, 9.dp.toPx(), p, style = Stroke(2.dp.toPx())) } }
+            drawCircle(c.text, 3.dp.toPx(), center)
+        }
+        Text("00", color = c.muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.TopCenter).padding(top = 7.dp))
+        Text("06", color = c.muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 7.dp))
+        Text("12", color = c.muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.CenterStart).padding(start = 7.dp))
+        Text("18", color = c.muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.CenterEnd).padding(end = 7.dp))
+        Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(formatTimeFromMinutes(targetTotal), fontSize = 39.sp, fontWeight = FontWeight.Bold); Text("目标起床", color = c.muted, style = MaterialTheme.typography.labelSmall) }
+    }
+}
+
+@Composable private fun RangeScrubber(early: Int, late: Int, onEarly: (Int) -> Unit, onLate: (Int) -> Unit) {
+    val c = LocalDawn.current
+    Row(verticalAlignment = Alignment.CenterVertically) { Text("−", color = c.sage, fontSize = 23.sp, modifier = Modifier.width(21.dp), textAlign = TextAlign.Center); Slider(value = (early + late).toFloat(), onValueChange = { val total = it.toInt().coerceIn(10, 180); val left = (total * early.toFloat() / (early + late).coerceAtLeast(1)).toInt().coerceIn(5, 90); onEarly(left); onLate((total - left).coerceIn(5, 90)) }, valueRange = 10f..180f, steps = 16, modifier = Modifier.weight(1f)); Text("+", color = c.sage, fontSize = 23.sp, modifier = Modifier.width(21.dp), textAlign = TextAlign.Center) }
+}
+
+private fun pointForAngle(angle: Float, center: Offset, radius: Float) = Offset(center.x + cos(angle) * radius, center.y + sin(angle) * radius)
+private fun pointForMinutes(minutes: Int, center: Offset, radius: Float): Offset = pointForAngle(minutes / 1440f * 2f * PI.toFloat() - PI.toFloat() / 2f, center, radius)
+private fun minuteForPoint(point: Offset, center: Offset): Int { val angle = atan2(point.y - center.y, point.x - center.x) + PI.toFloat() / 2f; val normalized = (angle + 2f * PI.toFloat()) % (2f * PI.toFloat()); return ((normalized / (2f * PI.toFloat())) * 1440f).toInt() / 5 * 5 }
+private fun distance(a: Offset, b: Offset) = sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y))
+private fun normalizedMinutes(minutes: Int) = ((minutes % 1440) + 1440) % 1440
+private fun targetCalendar(hour: Int, minute: Int): Calendar = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, hour); set(Calendar.MINUTE, minute); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0); if (timeInMillis <= System.currentTimeMillis() + 5 * 60_000L) add(Calendar.DAY_OF_YEAR, 1) }
+private fun formatTimeFromMinutes(minutes: Int) = formatTime(minutes / 60, minutes % 60)
+private fun formatTime(hour: Int, minute: Int): String { val total = normalizedMinutes(hour * 60 + minute); return String.format(Locale.getDefault(), "%02d:%02d", total / 60, total % 60) }
+private fun formatClock(date: Date) = SimpleDateFormat("HH:mm", Locale.getDefault()).format(date)
+private fun formatDuration(minutes: Long) = String.format(Locale.getDefault(), "%dh %02dm", minutes / 60, minutes % 60)
+
+private fun scheduleAlarm(context: Context, date: Date) {
+    val manager = context.getSystemService(AlarmManager::class.java); val intent = Intent(context, WakeReceiver::class.java); val pending = PendingIntent.getBroadcast(context, 1001, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+    if (Build.VERSION.SDK_INT >= 31 && !manager.canScheduleExactAlarms()) { context.startActivity(Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)); Toast.makeText(context, "请允许精确闹钟权限后再开启", Toast.LENGTH_LONG).show(); return }
+    manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, date.time, pending); Toast.makeText(context, "智能闹钟已设置为 ${formatClock(date)}", Toast.LENGTH_SHORT).show()
+}
