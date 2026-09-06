@@ -1,34 +1,47 @@
 package com.example.sleepsmart
 
+import android.Manifest
 import android.annotation.SuppressLint
-import android.app.AlarmManager
-import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
+import android.content.pm.PackageManager
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import java.util.Calendar
-import java.util.Locale
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import com.example.sleepsmart.alarm.AlarmScheduler
+import com.example.sleepsmart.data.AlarmSettings
+import com.example.sleepsmart.data.SettingsStore
+import com.example.sleepsmart.data.SleepDataProvider
+import org.json.JSONObject
 
 /**
  * 轻醒 SleepSmart —— 原生 WebView 前端
  *
  * 前端为 assets/neumorphic-alarm.html（新拟态、四页、多主题），
- * 通过 JS 桥接 AndroidAlarm 与原生闹钟调度交互：
- *   - AndroidAlarm.scheduleAlarm(hour, minute)  设置系统精确闹钟
- *   - AndroidAlarm.cancelAlarm()                取消闹钟
+ * 通过 JS 桥 AndroidAlarm 与原生交互：
+ *   - getState()                       读取持久化的闹钟设置（页面初始化用）
+ *   - saveAndSync(h, m, early, late, on) 持久化设置并同步系统闹钟（开启时请求通知权限）
+ *   - setWebBackground("rgb(r,g,b)")    主题切换时同步系统栏与 WebView 底色
+ *   - getSleepData()                    睡眠页/趋势页数据（当前为演示源，待接华为 Health Kit）
  */
 class MainActivity : ComponentActivity() {
+
+    private lateinit var webView: WebView
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val webView = WebView(this)
+        webView = WebView(this)
         setContentView(webView)
 
         webView.settings.apply {
@@ -38,68 +51,103 @@ class MainActivity : ComponentActivity() {
             useWideViewPort = true
             mediaPlaybackRequiresUserGesture = false
         }
+        // targetSdk 35+ 强制 edge-to-edge：让页面内容避开系统栏
+        ViewCompat.setOnApplyWindowInsetsListener(webView) { view, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            WindowInsetsCompat.CONSUMED
+        }
 
-        webView.addJavascriptInterface(AlarmBridge(this), "AndroidAlarm")
+        webView.addJavascriptInterface(AlarmBridge(this, webView), "AndroidAlarm")
         webView.loadUrl("file:///android_asset/neumorphic-alarm.html")
     }
 
-    /** 供 WebView JS 调用的闹钟桥接（@JavascriptInterface 方法运行在后台线程，统一切回主线程） */
-    inner class AlarmBridge(private val context: Context) {
+    /** 供 WebView JS 调用的桥接。@JavascriptInterface 方法运行在后台线程，UI 操作统一切回主线程。 */
+    private class AlarmBridge(
+        private val activity: MainActivity,
+        private val webView: WebView,
+    ) {
+        private val context: Context = activity
+
         @JavascriptInterface
-        fun scheduleAlarm(hour: Int, minute: Int) {
-            runOnUiThread { scheduleExactAlarm(context, targetCalendar(hour, minute)) }
+        fun getState(): String {
+            val s = SettingsStore.load(context)
+            return JSONObject()
+                .put("hour", s.hour)
+                .put("minute", s.minute)
+                .put("early", s.earlyMinutes)
+                .put("late", s.lateMinutes)
+                .put("on", s.enabled)
+                .toString()
         }
 
         @JavascriptInterface
-        fun cancelAlarm() {
-            runOnUiThread { cancelScheduledAlarm(context) }
+        fun getSleepData(): String = SleepDataProvider.json(readHour(), readMinute())
+
+        @JavascriptInterface
+        fun saveAndSync(hour: Int, minute: Int, early: Int, late: Int, on: Boolean) {
+            val clamped = SettingsStore.load(context).copy(
+                hour = hour.coerceIn(0, 23),
+                minute = minute.coerceIn(0, 59),
+                earlyMinutes = early.coerceIn(5, 90),
+                lateMinutes = late.coerceIn(5, 90),
+                enabled = on,
+            )
+            SettingsStore.save(context, clamped)
+            activity.runOnUiThread { activity.applyAlarmState(clamped) }
+        }
+
+        /** 主题切换时同步系统栏与 WebView 底色，参数形如 "rgb(250, 249, 245)"。 */
+        @JavascriptInterface
+        fun setWebBackground(cssColor: String) {
+            val rgb = Regex("\\d+").findAll(cssColor).map { it.value.toInt() }.toList()
+            if (rgb.size < 3) return
+            val color = Color.rgb(rgb[0], rgb[1], rgb[2])
+            activity.runOnUiThread {
+                webView.setBackgroundColor(color)
+                activity.window.statusBarColor = color
+                activity.window.navigationBarColor = color
+                val controller = WindowCompat.getInsetsController(activity.window, webView)
+                controller.isAppearanceLightStatusBars = ColorUtils.calculateLuminance(color) > 0.5
+                controller.isAppearanceLightNavigationBars = ColorUtils.calculateLuminance(color) > 0.5
+            }
+        }
+
+        private fun readHour(): Int = SettingsStore.load(context).hour
+        private fun readMinute(): Int = SettingsStore.load(context).minute
+    }
+
+    // ===== 闹钟状态落地（主线程） =====
+
+    internal fun applyAlarmState(settings: AlarmSettings) {
+        if (!settings.enabled) {
+            AlarmScheduler.cancel(this)
+            SettingsStore.save(this, settings.withScheduledAt(0L))
+            toast("已取消智能闹钟")
+            return
+        }
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 100)
+        }
+        if (!AlarmScheduler.canScheduleExact(this)) {
+            startActivity(AlarmScheduler.exactAlarmSettingsIntent())
+            toast("请先授予“闹钟和提醒”权限")
+            return
+        }
+        val target = AlarmScheduler.nextOccurrence(settings.hour, settings.minute)
+        if (AlarmScheduler.schedule(this, target)) {
+            SettingsStore.save(this, settings.withScheduledAt(target.timeInMillis))
+            val time = "%02d:%02d".format(target.get(java.util.Calendar.HOUR_OF_DAY), target.get(java.util.Calendar.MINUTE))
+            toast("智能闹钟已设置为 $time")
+        } else {
+            toast("未能设置闹钟，请检查权限")
         }
     }
 
-    companion object {
-        private const val REQUEST_CODE = 1001
-
-        private fun alarmPendingIntent(context: Context): PendingIntent =
-            PendingIntent.getBroadcast(
-                context,
-                REQUEST_CODE,
-                Intent(context, WakeReceiver::class.java),
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-
-        private fun targetCalendar(h: Int, m: Int): Calendar =
-            Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, h)
-                set(Calendar.MINUTE, m)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-                // 若目标时间已过（含 5 分钟缓冲），顺延到明天
-                if (timeInMillis <= System.currentTimeMillis() + 300_000L) add(Calendar.DAY_OF_YEAR, 1)
-            }
-
-        private fun scheduleExactAlarm(context: Context, date: Calendar) {
-            val manager = context.getSystemService(AlarmManager::class.java)
-            if (Build.VERSION.SDK_INT >= 31 && !manager.canScheduleExactAlarms()) {
-                context.startActivity(Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM))
-                Toast.makeText(context, "请允许精确闹钟权限后再开启", Toast.LENGTH_LONG).show()
-                return
-            }
-            manager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                date.timeInMillis,
-                alarmPendingIntent(context)
-            )
-            val text = String.format(
-                Locale.getDefault(), "%02d:%02d",
-                date.get(Calendar.HOUR_OF_DAY), date.get(Calendar.MINUTE)
-            )
-            Toast.makeText(context, "智能闹钟已设置为 $text", Toast.LENGTH_SHORT).show()
-        }
-
-        private fun cancelScheduledAlarm(context: Context) {
-            val manager = context.getSystemService(AlarmManager::class.java)
-            manager.cancel(alarmPendingIntent(context))
-            Toast.makeText(context, "已取消智能闹钟", Toast.LENGTH_SHORT).show()
-        }
+    private fun toast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 }

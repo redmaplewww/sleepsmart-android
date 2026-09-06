@@ -93,6 +93,12 @@
     user-select:none; -webkit-user-select:none;
     transition:background-color .8s ease;
   }
+  /* APK 内运行：去掉仿真外壳，铺满全屏（浏览器预览保留手机框效果） */
+  html.app-mode body{ display:block; min-height:100vh; }
+  html.app-mode .phone{
+    width:100%; height:100vh; max-height:none;
+    border-radius:0; box-shadow:none;
+  }
   /* ===== 头部 ===== */
   header{ padding:20px 22px 0; display:flex; align-items:flex-start; justify-content:space-between; }
   header h1{ font-size:22px; font-weight:600; letter-spacing:1px; color:var(--ink); transition:color .8s ease; }
@@ -314,7 +320,7 @@
     <!-- ============ 今晚 ============ -->
     <section class="page active" id="page-tonight">
       <div class="page-title">睡眠记录</div>
-      <div class="page-desc">昨夜 · 华为运动健康</div>
+      <div class="page-desc" id="tonight-desc">昨夜 · 演示数据</div>
 
       <div class="card">
         <h3>睡眠阶段</h3>
@@ -328,9 +334,9 @@
       </div>
 
       <div class="metrics">
-        <div class="metric"><div class="bar" style="background:var(--primary)"></div><div class="v">7h 30m</div><div class="l">总睡眠</div></div>
-        <div class="metric"><div class="bar" style="background:var(--deep)"></div><div class="v">5</div><div class="l">睡眠周期</div></div>
-        <div class="metric"><div class="bar" style="background:var(--coral)"></div><div class="v">82m</div><div class="l">深睡</div></div>
+        <div class="metric"><div class="bar" style="background:var(--primary)"></div><div class="v" id="m-total">7h 30m</div><div class="l">总睡眠</div></div>
+        <div class="metric"><div class="bar" style="background:var(--deep)"></div><div class="v" id="m-cycles">5</div><div class="l">睡眠周期</div></div>
+        <div class="metric"><div class="bar" style="background:var(--coral)"></div><div class="v" id="m-deep">82m</div><div class="l">深睡</div></div>
       </div>
 
       <div class="section-head"><h2>明早闹钟</h2><span>根据昨夜阶段设置</span></div>
@@ -340,7 +346,7 @@
           <div><div class="t">设置唤醒时间</div><div class="d">在目标时间前后选择合适阶段</div></div>
           <div class="arrow"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
         </div>
-        <div class="hint" style="margin-top:10px">建议 07:12 · 落在浅睡阶段，唤醒更轻松</div>
+        <div class="hint" style="margin-top:10px" id="tonight-hint">建议 07:12 · 落在浅睡阶段，唤醒更轻松</div>
       </div>
     </section>
 
@@ -350,7 +356,7 @@
       <div class="page-desc">近 7 晚 · 睡眠质量评分</div>
 
       <div class="card">
-        <div class="bars">
+        <div class="bars" id="trend-bars">
           <div class="bar-col"><div class="b" style="height:64%"></div><span>周一</span></div>
           <div class="bar-col"><div class="b" style="height:73%"></div><span>周二</span></div>
           <div class="bar-col"><div class="b" style="height:68%"></div><span>周三</span></div>
@@ -361,9 +367,9 @@
         </div>
       </div>
 
-      <div class="section-head"><h2>昨夜结构</h2><span>5 个周期</span></div>
+      <div class="section-head"><h2>昨夜结构</h2><span id="insight-cycles">5 个周期</span></div>
       <div class="rule"></div>
-      <div class="card" style="margin-top:14px">
+      <div class="card" style="margin-top:14px" id="stage-rows">
         <div class="stage-row"><span class="name">浅睡</span><div class="gauge"><i style="width:76%;background:var(--light)"></i></div><span class="val">250m</span></div>
         <div class="stage-row"><span class="name">深睡</span><div class="gauge"><i style="width:25%;background:var(--deep)"></i></div><span class="val">82m</span></div>
         <div class="stage-row"><span class="name">REM</span><div class="gauge"><i style="width:36%;background:var(--rem)"></i></div><span class="val">118m</span></div>
@@ -424,8 +430,8 @@
       <div class="card" style="margin-top:18px">
         <div class="setting">
           <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.6-9.5-9A5.5 5.5 0 0 1 12 6.5 5.5 5.5 0 0 1 21.5 12C19 16.4 12 21 12 21z"/></svg></div>
-          <div><div class="tt">华为运动健康</div><div class="dd">已连接 · 最近同步 今天 07:45</div></div>
-          <div class="st">已连接</div>
+          <div><div class="tt">华为运动健康</div><div class="dd">未接入 · 当前为内置演示数据</div></div>
+          <div class="st">演示</div>
         </div>
         <div class="rule" style="margin:2px 0"></div>
         <div class="setting">
@@ -502,6 +508,13 @@
     document.documentElement.setAttribute('data-theme', name);
     if (LIGHT_THEMES.includes(name)) lastLight = name;
     document.querySelectorAll('.theme-opt').forEach(o => o.classList.toggle('active', o.dataset.theme === name));
+    // 把当前主题底色回传给原生，同步系统栏与 WebView 底色
+    try {
+      if (window.AndroidAlarm) {
+        const bg = getComputedStyle(document.querySelector('.phone')).backgroundColor;
+        if (bg) window.AndroidAlarm.setWebBackground(bg);
+      }
+    } catch (e) { /* 无桥接环境 */ }
   }
   $('#dark-btn').addEventListener('click', () => {
     const cur = document.documentElement.getAttribute('data-theme') || 'purple';
@@ -510,28 +523,22 @@
   document.querySelectorAll('.theme-opt').forEach(o => o.addEventListener('click', () => applyTheme(o.dataset.theme)));
   applyTheme(document.documentElement.getAttribute('data-theme') || 'purple');
 
-  // ===== 今晚：睡眠时间轴 =====
-  const segs = [
-    ['light',90],['deep',30],['light',55],['rem',25],['light',45],
-    ['deep',20],['rem',20],['light',95],['deep',32],['rem',28]
-  ];
-  const track = $('#sleep-track');
-  const totalMin = segs.reduce((s,x) => s + x[1], 0);   // 440
-  segs.forEach(([kind, m]) => {
-    const el = document.createElement('div');
-    el.className = 'seg ' + kind;
-    el.style.width = (m / totalMin * 100) + '%';
-    track.appendChild(el);
-  });
-  // 建议唤醒点：约在 82% 位置
-  const mark = document.createElement('div');
-  mark.className = 'wake-mark'; mark.style.left = '82%';
-  const tag = document.createElement('div');
-  tag.className = 'wake-tag'; tag.textContent = '建议唤醒'; tag.style.left = '82%';
-  track.appendChild(mark); track.appendChild(tag);
+  // ===== 今晚：睡眠数据由原生桥注入（见底部 applySleepData），浏览器预览时保留静态稿 =====
 
   // ===== 闹钟：表盘（Uiverse 风格，12 小时）=====
   const state = { target: 7*60 + 30, early: 30, late: 30, on: false };
+  // 原生桥可用时：以持久化设置初始化，并进入全屏 app 模式
+  const HAS_BRIDGE = !!window.AndroidAlarm;
+  if (HAS_BRIDGE) {
+    document.documentElement.classList.add('app-mode');
+    try {
+      const s = JSON.parse(window.AndroidAlarm.getState());
+      state.target = Math.min(719, s.hour * 60 + s.minute);
+      state.early = Math.min(90, Math.max(5, s.early));
+      state.late = Math.min(90, Math.max(5, s.late));
+      state.on = !!s.on;
+    } catch (e) { /* 桥接异常时保留默认值 */ }
+  }
   const face = $('#clock-face');
   const deg12 = m => ((m % 720) + 720) % 720 * 0.5;
   const rad12 = m => deg12(m) * Math.PI / 180;
@@ -628,25 +635,111 @@
     else if (active === 'hand-late') state.late = Math.min(90, Math.max(5, ((m - state.target + 720) % 720)));
     render();
   });
-  face.addEventListener('pointerup', () => { active = null; face.style.cursor = 'grab'; });
+  face.addEventListener('pointerup', () => { if (active) persistNow(); active = null; face.style.cursor = 'grab'; });
 
   // 按钮
-  $('#btn-alarm').addEventListener('click', () => {
-    state.on = !state.on;
+  function syncAlarmUi() {
     const b = $('#btn-alarm');
     b.textContent = state.on ? '闹钟已开启 · ' + fmt(state.target) : '开启闹钟';
     b.classList.toggle('on', state.on);
-    // 原生桥接：真实设置/取消系统闹钟（浏览器预览时无此对象，忽略）
+  }
+
+  // 把当前设置持久化到原生，由原生同步/取消系统闹钟（开启时附带请求通知权限）
+  function persistNow() {
     try {
-      if (window.AndroidAlarm) {
-        if (state.on) window.AndroidAlarm.scheduleAlarm(Math.floor(state.target / 60), state.target % 60);
-        else window.AndroidAlarm.cancelAlarm();
-      }
-    } catch (e) { /* 无桥接环境 */ }
+      if (window.AndroidAlarm) window.AndroidAlarm.saveAndSync(
+        Math.floor(state.target / 60), state.target % 60,
+        state.early, state.late, state.on);
+    } catch (e) { /* 无桥接环境（浏览器预览） */ }
+  }
+
+  $('#btn-alarm').addEventListener('click', () => {
+    state.on = !state.on;
+    syncAlarmUi();
+    persistNow();
   });
-  $('#btn-manual').addEventListener('click', () => { state.target = (state.target + 15) % 720; render(); });
+  $('#btn-manual').addEventListener('click', () => { state.target = (state.target + 15) % 720; render(); persistNow(); });
 
   render();
+  syncAlarmUi();
+
+  // ===== 睡眠数据：由原生桥注入（当前为演示源，待接华为 Health Kit）=====
+  function applySleepData(d) {
+    $('#tonight-desc').textContent = d.periodLabel + ' · ' + d.dateText + ' · 演示数据';
+
+    // 阶段时间轴 + 建议唤醒点
+    const track = $('#sleep-track');
+    track.innerHTML = '';
+    d.stages.forEach(s => {
+      const el = document.createElement('div');
+      el.className = 'seg ' + s.k;
+      el.style.width = (s.m / d.totalMinutes * 100) + '%';
+      track.appendChild(el);
+    });
+    const at = (d.recommendedFraction * 100) + '%';
+    const mark = document.createElement('div');
+    mark.className = 'wake-mark'; mark.style.left = at;
+    const tag = document.createElement('div');
+    tag.className = 'wake-tag'; tag.style.left = at;
+    tag.textContent = '建议 ' + fmt(d.recommendedMinute);
+    track.appendChild(mark); track.appendChild(tag);
+
+    // 关键指标
+    $('#m-total').textContent = Math.floor(d.totalMinutes / 60) + 'h ' + (d.totalMinutes % 60) + 'm';
+    $('#m-cycles').textContent = d.cycles;
+    $('#m-deep').textContent = d.deepMinutes + 'm';
+    $('#tonight-hint').textContent = '建议 ' + fmt(d.recommendedMinute) + ' · ' + d.reason;
+
+    // 趋势页：近 7 晚
+    const bars = $('#trend-bars');
+    bars.innerHTML = '';
+    const maxM = Math.max.apply(null, d.trend.map(t => t.minutes));
+    d.trend.forEach(t => {
+      const col = document.createElement('div');
+      col.className = 'bar-col';
+      const b = document.createElement('div');
+      b.className = 'b' + (t.latest ? ' fill' : '');
+      b.style.height = Math.round(t.minutes / maxM * 100) + '%';
+      const s = document.createElement('span');
+      s.textContent = t.latest ? '昨晚' : t.label;
+      col.appendChild(b); col.appendChild(s);
+      bars.appendChild(col);
+    });
+
+    // 昨夜结构
+    $('#insight-cycles').textContent = d.cycles + ' 个周期';
+    const pct = x => Math.round(x / d.totalMinutes * 100);
+    $('#stage-rows').innerHTML =
+      '<div class="stage-row"><span class="name">浅睡</span><div class="gauge"><i style="width:' + pct(d.lightMinutes) + '%;background:var(--light)"></i></div><span class="val">' + d.lightMinutes + 'm</span></div>' +
+      '<div class="stage-row"><span class="name">深睡</span><div class="gauge"><i style="width:' + pct(d.deepMinutes) + '%;background:var(--deep)"></i></div><span class="val">' + d.deepMinutes + 'm</span></div>' +
+      '<div class="stage-row"><span class="name">REM</span><div class="gauge"><i style="width:' + pct(d.remMinutes) + '%;background:var(--rem)"></i></div><span class="val">' + d.remMinutes + 'm</span></div>';
+  }
+
+  try {
+    if (window.AndroidAlarm) {
+      applySleepData(JSON.parse(window.AndroidAlarm.getSleepData()));
+    } else {
+      throw new Error('无桥接环境');
+    }
+  } catch (e) {
+    // 浏览器预览：使用与 APK 相同结构的内置演示数据
+    applySleepData({
+      periodLabel: '昨夜', dateText: '9月6日 周日', startText: '23:00', endText: '07:10',
+      totalMinutes: 490, cycles: 3, deepMinutes: 130, lightMinutes: 280, remMinutes: 80,
+      stages: [
+        {k:'light',m:20},{k:'deep',m:50},{k:'light',m:25},{k:'rem',m:25},{k:'light',m:40},
+        {k:'deep',m:40},{k:'light',m:40},{k:'rem',m:25},{k:'light',m:45},{k:'deep',m:20},
+        {k:'light',m:40},{k:'rem',m:30},{k:'light',m:50},{k:'deep',m:20},{k:'light',m:20}
+      ],
+      recommendedMinute: 420, recommendedFraction: 480 / 490,
+      reason: '窗口内检测到浅睡，优先在该阶段唤醒',
+      trend: [
+        {label:'二',minutes:392},{label:'三',minutes:448},{label:'四',minutes:425},
+        {label:'五',minutes:466},{label:'六',minutes:431},{label:'日',minutes:452},
+        {label:'昨',minutes:490,latest:true}
+      ]
+    });
+  }
 })();
 </script>
 </body>
