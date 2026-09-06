@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="purple">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>轻醒 · 智能闹钟（新拟态 · 四页 + 多主题）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  /* ===== 主题变量（5 套）===== */
+  :root, html[data-theme="purple"]{
+    /* 现在的（紫） */
+    --bg:#E4EBF5; --surface:#E4EBF5; --sd:#c8d0e7; --sl:#ffffff;
+    --ink:#5a6488; --muted:#9baacf; --tick:#c8d0e7;
+    --primary:#6d5dfc; --primary-light:#8abdff; --primary-dark:#5b0eeb;
+    --sky:#8ab8d8; --coral:#d89a9a; --deep:#6d7ec4; --light:#7fb8a0; --rem:#d8a0a0;
+    --body-bg:#cfd6e6;
+    --shadow-out:8px 8px 16px var(--sd), -8px -8px 16px var(--sl);
+    --shadow-out-sm:5px 5px 10px var(--sd), -5px -5px 10px var(--sl);
+    --shadow-in:inset 6px 6px 12px var(--sd), inset -6px -6px 12px var(--sl);
+    --shadow-in-sm:inset 3px 3px 6px var(--sd), inset -3px -3px 6px var(--sl);
+  }
+  html[data-theme="macaron"]{
+    /* 柔和的马卡龙 */
+    --bg:#F6EFF3; --surface:#F6EFF3; --sd:#E4D2DC; --sl:#fffdfe;
+    --ink:#6E5F6B; --muted:#BFA6B5; --tick:#E4D2DC;
+    --primary:#E89AB4; --primary-light:#F6C9D8; --primary-dark:#D17FA0;
+    --sky:#A9C6E8; --coral:#EFB89E; --deep:#A5A9E0; --light:#A9D6C2; --rem:#E7B7C7;
+    --body-bg:#E9DDE5;
+    --shadow-out:8px 8px 16px var(--sd), -8px -8px 16px var(--sl);
+    --shadow-out-sm:5px 5px 10px var(--sd), -5px -5px 10px var(--sl);
+    --shadow-in:inset 6px 6px 12px var(--sd), inset -6px -6px 12px var(--sl);
+    --shadow-in-sm:inset 3px 3px 6px var(--sd), inset -3px -3px 6px var(--sl);
+  }
+  html[data-theme="green"]{
+    /* 绿色系 */
+    --bg:#E8EEE6; --surface:#E8EEE6; --sd:#C8D6C6; --sl:#ffffff;
+    --ink:#4F6256; --muted:#9BB09F; --tick:#C8D6C6;
+    --primary:#4E9B74; --primary-light:#8FCBAE; --primary-dark:#2E6B52;
+    --sky:#8CB8C4; --coral:#D9A08E; --deep:#6B8A9E; --light:#7FB896; --rem:#D0A8A0;
+    --body-bg:#D3DFD4;
+    --shadow-out:8px 8px 16px var(--sd), -8px -8px 16px var(--sl);
+    --shadow-out-sm:5px 5px 10px var(--sd), -5px -5px 10px var(--sl);
+    --shadow-in:inset 6px 6px 12px var(--sd), inset -6px -6px 12px var(--sl);
+    --shadow-in-sm:inset 3px 3px 6px var(--sd), inset -3px -3px 6px var(--sl);
+  }
+  html[data-theme="grey"]{
+    /* 灰色系 */
+    --bg:#E9EBEF; --surface:#E9EBEF; --sd:#C9CDD4; --sl:#ffffff;
+    --ink:#555B66; --muted:#9AA0AB; --tick:#C9CDD4;
+    --primary:#7A8494; --primary-light:#A8B0BE; --primary-dark:#5C6574;
+    --sky:#9BB0BE; --coral:#C0A0A0; --deep:#8892A8; --light:#9CAEA6; --rem:#B8A0A0;
+    --body-bg:#D4D7DC;
+    --shadow-out:8px 8px 16px var(--sd), -8px -8px 16px var(--sl);
+    --shadow-out-sm:5px 5px 10px var(--sd), -5px -5px 10px var(--sl);
+    --shadow-in:inset 6px 6px 12px var(--sd), inset -6px -6px 12px var(--sl);
+    --shadow-in-sm:inset 3px 3px 6px var(--sd), inset -3px -3px 6px var(--sl);
+  }
+  html[data-theme="night"]{
+    /* 黑夜模式 */
+    --bg:#2b2f3d; --surface:#2b2f3d; --sd:#1d2029; --sl:#3a4050;
+    --ink:#cdd4e8; --muted:#7f889e; --tick:#454c60;
+    --primary:#8d7dff; --primary-light:#6d5dfc; --primary-dark:#4a3fd8;
+    --sky:#6f9fc0; --coral:#c08a8a; --deep:#8490d6; --light:#7fc09a; --rem:#c89494;
+    --body-bg:#14161d;
+    --shadow-out:8px 8px 16px var(--sd), -8px -8px 16px var(--sl);
+    --shadow-out-sm:5px 5px 10px var(--sd), -5px -5px 10px var(--sl);
+    --shadow-in:inset 6px 6px 12px var(--sd), inset -6px -6px 12px var(--sl);
+    --shadow-in-sm:inset 3px 3px 6px var(--sd), inset -3px -3px 6px var(--sl);
+  }
+
+  *{ margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ height:100%; }
+  body{
+    font-family:'Noto Serif SC','Source Han Serif SC','Songti SC','SimSun',serif;
+    letter-spacing:0.02em;
+    background:var(--body-bg);
+    display:flex; align-items:center; justify-content:center;
+    min-height:100vh; color:var(--ink);
+    touch-action:manipulation;
+    transition:background-color .8s ease;
+  }
+
+  /* ===== 手机外壳（APK 尺寸 390×844）===== */
+  .phone{
+    width:390px; height:844px; max-height:100vh;
+    background:var(--bg);
+    border-radius:44px;
+    box-shadow:0 40px 80px rgba(90,100,140,.35), 0 0 0 10px #0b0d14, 0 0 0 12px #262a38;
+    display:flex; flex-direction:column;
+    overflow:hidden; position:relative;
+    user-select:none; -webkit-user-select:none;
+    transition:background-color .8s ease;
+  }
+  /* ===== 头部 ===== */
+  header{ padding:20px 22px 0; display:flex; align-items:flex-start; justify-content:space-between; }
+  header h1{ font-size:22px; font-weight:600; letter-spacing:1px; color:var(--ink); transition:color .8s ease; }
+  header .sub{ font-size:12px; color:var(--muted); margin-top:2px; transition:color .8s ease; }
+  .header-right{ display:flex; align-items:center; gap:12px; }
+  .connected{ display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--primary); transition:color .8s ease; }
+  .connected i{ width:8px; height:8px; border-radius:50%; background:var(--primary);
+    box-shadow:0 0 0 4px rgba(109,93,252,.15); transition:background-color .8s ease; }
+
+  /* 暗色切换按钮 */
+  .dark-btn{ width:38px; height:38px; border-radius:14px; border:none; cursor:pointer;
+    background:var(--surface); box-shadow:var(--shadow-out-sm);
+    display:flex; align-items:center; justify-content:center; color:var(--primary);
+    transition:box-shadow .8s ease, background-color .8s ease, color .8s ease, transform .15s ease; }
+  .dark-btn:active{ box-shadow:var(--shadow-in-sm); transform:scale(.94); }
+  .dark-btn svg{ width:19px; height:19px; }
+  .dark-btn .sun{ display:none; }
+  html[data-theme="night"] .dark-btn .moon{ display:none; }
+  html[data-theme="night"] .dark-btn .sun{ display:block; }
+
+  /* ===== 主内容 ===== */
+  main{ flex:1; overflow-y:auto; padding:6px 22px 14px; scrollbar-width:none; position:relative; }
+  main::-webkit-scrollbar{ display:none; }
+  .page{ display:none; }
+  .page.active{ display:block; animation:pageIn .38s ease; }
+  @keyframes pageIn{ from{ opacity:0; transform:translateY(10px);} to{ opacity:1; transform:none;} }
+
+  .page-title{ font-size:28px; font-weight:600; margin-top:12px; color:var(--ink); transition:color .8s ease; }
+  .page-desc{ font-size:13px; color:var(--muted); margin-top:4px; transition:color .8s ease; }
+
+  /* ===== 通用卡片 ===== */
+  .card{ background:var(--surface); border-radius:24px; box-shadow:var(--shadow-out);
+    padding:18px; margin-top:18px; transition:box-shadow .8s ease, background-color .8s ease; }
+  .card h3{ font-size:14px; font-weight:600; color:var(--ink); transition:color .8s ease; }
+  .card .hint{ font-size:11px; color:var(--muted); margin-top:3px; transition:color .8s ease; }
+  .section-head{ display:flex; align-items:baseline; justify-content:space-between; margin-top:24px; }
+  .section-head h2{ font-size:17px; font-weight:600; color:var(--ink); transition:color .8s ease; }
+  .section-head span{ font-size:11px; color:var(--muted); transition:color .8s ease; }
+  .rule{ height:1px; background:var(--sd); margin-top:10px; opacity:.7; transition:background-color .8s ease; }
+
+  /* ===== 今晚：睡眠时间轴 ===== */
+  .track{ position:relative; height:26px; margin-top:16px; border-radius:99px; box-shadow:var(--shadow-in);
+    display:flex; overflow:hidden; padding:5px; gap:3px; transition:box-shadow .8s ease; }
+  .track .seg{ height:100%; border-radius:99px; transition:background-color .8s ease; }
+  .track .seg.deep{ background:var(--deep); }
+  .track .seg.light{ background:var(--light); }
+  .track .seg.rem{ background:var(--rem); }
+  .wake-mark{ position:absolute; top:-7px; bottom:-7px; width:3px; background:var(--primary); border-radius:3px; }
+  .wake-tag{ position:absolute; top:-20px; transform:translateX(-50%); font-size:10px; color:var(--primary);
+    font-weight:600; white-space:nowrap; transition:color .8s ease; }
+  .legend{ display:flex; gap:14px; margin-top:12px; flex-wrap:wrap; }
+  .legend span{ font-size:11px; color:var(--muted); display:flex; align-items:center; gap:5px; transition:color .8s ease; }
+  .legend i{ width:10px; height:10px; border-radius:4px; display:inline-block; }
+  .legend i.deep{ background:var(--deep); } .legend i.light{ background:var(--light); } .legend i.rem{ background:var(--rem); }
+
+  /* 指标 */
+  .metrics{ display:flex; gap:12px; margin-top:16px; }
+  .metric{ flex:1; background:var(--surface); border-radius:20px; box-shadow:var(--shadow-out);
+    padding:14px 12px; text-align:center; transition:box-shadow .8s ease, background-color .8s ease; }
+  .metric .v{ font-size:19px; font-weight:600; color:var(--ink); transition:color .8s ease; }
+  .metric .l{ font-size:11px; color:var(--muted); margin-top:3px; transition:color .8s ease; }
+  .metric .bar{ width:22px; height:3px; border-radius:3px; margin:0 auto 8px; }
+
+  /* 可点行 */
+  .row{ display:flex; align-items:center; justify-content:space-between; padding:4px 0; cursor:pointer; }
+  .row .t{ font-size:17px; font-weight:600; color:var(--ink); transition:color .8s ease; }
+  .row .d{ font-size:12px; color:var(--muted); margin-top:3px; transition:color .8s ease; }
+  .row .arrow{ width:30px; height:30px; border-radius:11px; background:var(--surface);
+    box-shadow:var(--shadow-out-sm); display:flex; align-items:center; justify-content:center;
+    color:var(--primary); flex:none; transition:box-shadow .8s ease, background-color .8s ease; }
+  .row .arrow svg{ width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:2.2; }
+
+  /* ===== 趋势：柱状图 ===== */
+  .bars{ display:flex; align-items:flex-end; gap:10px; height:130px; margin-top:16px; }
+  .bar-col{ flex:1; display:flex; flex-direction:column; align-items:center; gap:7px; height:100%; justify-content:flex-end; }
+  .bar-col .b{ width:100%; border-radius:12px 12px 6px 6px; box-shadow:var(--shadow-out-sm);
+    background:var(--surface); position:relative; transition:box-shadow .8s ease, background-color .8s ease; }
+  .bar-col .b.fill{ background:linear-gradient(180deg,var(--primary-light),var(--primary));
+    box-shadow:inset 2px 2px 4px var(--primary-light), inset -2px -2px 4px var(--primary-dark), var(--shadow-out-sm); }
+  .bar-col span{ font-size:10px; color:var(--muted); transition:color .8s ease; }
+  /* 阶段条 */
+  .stage-row{ display:flex; align-items:center; gap:12px; margin-top:13px; }
+  .stage-row .name{ width:38px; font-size:13px; font-weight:600; color:var(--ink); transition:color .8s ease; }
+  .stage-row .gauge{ flex:1; height:10px; border-radius:99px; box-shadow:var(--shadow-in); transition:box-shadow .8s ease; }
+  .stage-row .gauge i{ display:block; height:100%; border-radius:99px; }
+  .stage-row .val{ font-size:12px; color:var(--muted); width:42px; text-align:right; transition:color .8s ease; }
+
+  /* ===== 闹钟：表盘（Uiverse 新拟态风格）===== */
+  .dial-wrap{ position:relative; width:300px; height:300px; margin:16px auto 0; }
+  .clock-face{
+    width:300px; height:300px; background:var(--surface); border-radius:50%;
+    box-shadow:12px 12px 24px var(--sd), -12px -12px 24px var(--sl);
+    position:relative; display:flex; justify-content:center; align-items:center;
+    touch-action:none; cursor:grab;
+    transition:background-color .8s ease, box-shadow .8s ease;
+  }
+  .clock-face::before{
+    content:""; position:absolute; width:92%; height:92%; border-radius:50%;
+    box-shadow:inset 8px 8px 16px var(--sd), inset -8px -8px 16px var(--sl);
+    pointer-events:none; transition:box-shadow .8s ease;
+  }
+  .marker{ position:absolute; width:100%; height:100%; top:0; left:0; z-index:1; pointer-events:none; }
+  .marker-dot{ position:absolute; top:15px; left:50%; transform:translateX(-50%);
+    width:6px; height:6px; border-radius:50%; background:var(--surface);
+    box-shadow:inset 1px 1px 2px var(--sd), inset -1px -1px 2px var(--sl);
+    transition:box-shadow .8s ease, background-color .8s ease; }
+  .marker.major .marker-dot{ width:8px; height:8px; }
+  .number{ position:absolute; width:100%; height:100%; top:0; left:0; z-index:3; text-align:center;
+    font-size:24px; font-weight:600; color:var(--muted); pointer-events:none;
+    text-shadow:1px 1px 1px var(--sl), -1px -1px 1px var(--sd);
+    transition:color .8s ease; }
+  .number span{ display:inline-block; transform:translateY(35px); }
+  .wake-svg{ position:absolute; inset:0; width:100%; height:100%; z-index:2; pointer-events:none; }
+  #wake-arc{ stroke:var(--primary); transition:stroke .8s ease; }
+  .hand{ position:absolute; bottom:50%; left:50%; transform-origin:bottom center;
+    border-radius:10px 10px 0 0; box-shadow:2px 2px 5px rgba(0,0,0,.18); pointer-events:none; }
+  .hand-target{ width:8px; height:72px; background:var(--primary); z-index:6; transition:background-color .8s ease; }
+  .hand-early{ width:5px; height:94px; background:var(--sky); z-index:5; opacity:.92; transition:background-color .8s ease; }
+  .hand-late{ width:5px; height:94px; background:var(--coral); z-index:5; opacity:.92; transition:background-color .8s ease; }
+  .center-pin{ width:22px; height:22px; background:var(--surface); border-radius:50%;
+    position:absolute; z-index:10; box-shadow:inset 3px 3px 6px var(--sd), inset -3px -3px 6px var(--sl);
+    transition:box-shadow .8s ease, background-color .8s ease; }
+  .center-pin::after{ content:""; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:6px; height:6px; background:var(--primary); border-radius:50%; }
+  .dial-center{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    text-align:center; pointer-events:none; z-index:11;
+    width:150px; height:150px; border-radius:50%;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .dial-center::before{
+    content:""; position:absolute; inset:0; z-index:-1; border-radius:50%;
+    background:radial-gradient(circle at 50% 46%, color-mix(in srgb, var(--surface) 32%, transparent) 0%, color-mix(in srgb, var(--sl) 12%, transparent) 45%, transparent 70%);
+    -webkit-backdrop-filter:blur(9px) saturate(1.05);
+    backdrop-filter:blur(9px) saturate(1.05);
+    -webkit-mask-image:radial-gradient(circle, #000 40%, transparent 72%);
+    mask-image:radial-gradient(circle, #000 40%, transparent 72%);
+    transition:background .8s ease;
+  }
+  .dial-center .t{ font-size:34px; font-weight:600; letter-spacing:1px; color:var(--ink); transition:color .8s ease; }
+  .dial-center .l{ font-size:11px; color:var(--muted); margin-top:3px; transition:color .8s ease; }
+  .summary{ margin-top:14px; text-align:center; }
+  .summary .goal{ font-size:13px; color:var(--muted); transition:color .8s ease; }
+  .summary .rec{ font-size:15px; font-weight:600; color:var(--primary); margin-top:4px; transition:color .8s ease; }
+  .summary .reason{ font-size:11px; color:var(--muted); margin-top:3px; transition:color .8s ease; }
+  .range-legend{ display:flex; gap:14px; margin-top:12px; flex-wrap:wrap; }
+  .range-legend span{ font-size:11px; color:var(--muted); display:flex; align-items:center; gap:5px; transition:color .8s ease; }
+  .dot{ width:9px; height:9px; border-radius:50%; display:inline-block; }
+  .dot.solid{ background:var(--primary); }
+  .dot.hollow{ background:transparent; box-shadow:inset 0 0 0 2px var(--sky); }
+  .dot.hollow.coral{ box-shadow:inset 0 0 0 2px var(--coral); }
+  .range-labels{ display:flex; justify-content:space-between; margin-top:14px; font-size:11px; color:var(--muted); transition:color .8s ease; }
+
+  /* ===== 按钮 ===== */
+  .btn{ width:100%; height:52px; border:none; border-radius:18px; margin-top:16px;
+    font-size:15px; font-weight:600; cursor:pointer; color:var(--ink);
+    background:var(--surface); box-shadow:var(--shadow-out);
+    transition:box-shadow .8s ease, background-color .8s ease, color .8s ease, transform .05s ease; font-family:inherit; }
+  .btn:active{ box-shadow:var(--shadow-in); transform:translateY(1px); }
+  .btn.primary{ color:#fff; background:var(--primary);
+    box-shadow:inset 2px 2px 6px var(--primary-light), inset -2px -2px 6px var(--primary-dark), var(--shadow-out); }
+  html[data-theme="night"] .btn.primary{ color:#e8e6ff; }
+  .btn.primary.on{ box-shadow:var(--shadow-in); color:var(--primary); background:var(--surface); }
+
+  /* ===== 设置行 ===== */
+  .setting{ display:flex; align-items:center; gap:13px; padding:12px 0; }
+  .setting .ico{ width:40px; height:40px; border-radius:14px; background:var(--surface);
+    box-shadow:var(--shadow-out-sm); display:flex; align-items:center; justify-content:center;
+    color:var(--primary); flex:none; transition:box-shadow .8s ease, background-color .8s ease; }
+  .setting .ico svg{ width:19px; height:19px; stroke:currentColor; fill:none; stroke-width:1.9; }
+  .setting .tt{ font-size:15px; font-weight:600; color:var(--ink); transition:color .8s ease; }
+  .setting .dd{ font-size:12px; color:var(--muted); margin-top:2px; transition:color .8s ease; }
+  .setting .st{ margin-left:auto; font-size:11px; font-weight:600; color:var(--primary); transition:color .8s ease; }
+
+  /* ===== 主题配色选择 ===== */
+  .theme-grid{ display:flex; gap:12px; margin-top:16px; flex-wrap:wrap; }
+  .theme-opt{ flex:1; min-width:58px; background:var(--surface); border-radius:16px; box-shadow:var(--shadow-out-sm);
+    padding:12px 6px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer;
+    transition:box-shadow .8s ease, background-color .8s ease; }
+  .theme-opt .swatch{ width:30px; height:30px; border-radius:50%; background:var(--c);
+    box-shadow:inset 2px 2px 4px rgba(255,255,255,.45), inset -2px -2px 4px rgba(0,0,0,.15); }
+  .theme-opt .name{ font-size:11px; color:var(--muted); transition:color .8s ease; }
+  .theme-opt.active{ box-shadow:var(--shadow-in-sm); }
+  .theme-opt.active .name{ color:var(--primary); font-weight:600; }
+
+  /* ===== 底部导航 ===== */
+  nav{ height:80px; padding:10px 22px calc(12px + env(safe-area-inset-bottom));
+    background:var(--bg); display:flex; justify-content:space-between; align-items:center;
+    transition:background-color .8s ease; }
+  .nav-item{ width:52px; height:52px; border-radius:18px; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:4px; cursor:pointer;
+    color:var(--muted); box-shadow:var(--shadow-out-sm);
+    transition:box-shadow .8s ease, color .8s ease, background-color .8s ease; }
+  .nav-item svg{ width:21px; height:21px; stroke:currentColor; fill:none; stroke-width:1.8; }
+  .nav-item span{ font-size:10px; font-weight:600; }
+  .nav-item.active{ color:var(--primary); box-shadow:var(--shadow-in-sm); }
+
+  @media (max-width:420px){
+    body{ background:var(--bg); }
+    .phone{ width:100%; height:100vh; max-height:none; border-radius:0; box-shadow:none; }
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+  <header>
+    <div>
+      <h1>轻醒</h1>
+      <div class="sub" id="header-sub">智能闹钟</div>
+    </div>
+    <div class="header-right">
+      <button class="dark-btn" id="dark-btn" aria-label="切换深色模式">
+        <svg class="moon" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+      <div class="connected"><i></i>已连接</div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ============ 今晚 ============ -->
+    <section class="page active" id="page-tonight">
+      <div class="page-title">睡眠记录</div>
+      <div class="page-desc">昨夜 · 华为运动健康</div>
+
+      <div class="card">
+        <h3>睡眠阶段</h3>
+        <div class="hint">实线为建议唤醒点</div>
+        <div class="track" id="sleep-track"></div>
+        <div class="legend">
+          <span><i class="deep"></i>深睡</span>
+          <span><i class="light"></i>浅睡</span>
+          <span><i class="rem"></i>REM</span>
+        </div>
+      </div>
+
+      <div class="metrics">
+        <div class="metric"><div class="bar" style="background:var(--primary)"></div><div class="v">7h 30m</div><div class="l">总睡眠</div></div>
+        <div class="metric"><div class="bar" style="background:var(--deep)"></div><div class="v">5</div><div class="l">睡眠周期</div></div>
+        <div class="metric"><div class="bar" style="background:var(--coral)"></div><div class="v">82m</div><div class="l">深睡</div></div>
+      </div>
+
+      <div class="section-head"><h2>明早闹钟</h2><span>根据昨夜阶段设置</span></div>
+      <div class="rule"></div>
+      <div class="card" style="margin-top:14px">
+        <div class="row" id="go-alarm">
+          <div><div class="t">设置唤醒时间</div><div class="d">在目标时间前后选择合适阶段</div></div>
+          <div class="arrow"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+        </div>
+        <div class="hint" style="margin-top:10px">建议 07:12 · 落在浅睡阶段，唤醒更轻松</div>
+      </div>
+    </section>
+
+    <!-- ============ 趋势 ============ -->
+    <section class="page" id="page-insights">
+      <div class="page-title">睡眠趋势</div>
+      <div class="page-desc">近 7 晚 · 睡眠质量评分</div>
+
+      <div class="card">
+        <div class="bars">
+          <div class="bar-col"><div class="b" style="height:64%"></div><span>周一</span></div>
+          <div class="bar-col"><div class="b" style="height:73%"></div><span>周二</span></div>
+          <div class="bar-col"><div class="b" style="height:68%"></div><span>周三</span></div>
+          <div class="bar-col"><div class="b" style="height:81%"></div><span>周四</span></div>
+          <div class="bar-col"><div class="b" style="height:76%"></div><span>周五</span></div>
+          <div class="bar-col"><div class="b" style="height:84%"></div><span>周六</span></div>
+          <div class="bar-col"><div class="b fill" style="height:78%"></div><span>昨晚</span></div>
+        </div>
+      </div>
+
+      <div class="section-head"><h2>昨夜结构</h2><span>5 个周期</span></div>
+      <div class="rule"></div>
+      <div class="card" style="margin-top:14px">
+        <div class="stage-row"><span class="name">浅睡</span><div class="gauge"><i style="width:76%;background:var(--light)"></i></div><span class="val">250m</span></div>
+        <div class="stage-row"><span class="name">深睡</span><div class="gauge"><i style="width:25%;background:var(--deep)"></i></div><span class="val">82m</span></div>
+        <div class="stage-row"><span class="name">REM</span><div class="gauge"><i style="width:36%;background:var(--rem)"></i></div><span class="val">118m</span></div>
+      </div>
+
+      <div class="section-head"><h2>数据说明</h2><span>阶段为设备估算</span></div>
+      <div class="rule"></div>
+      <div class="page-desc" style="margin-top:12px;line-height:1.7">阶段数据用于日常参考。没有可用阶段时，闹钟会按设定的目标时间触发。</div>
+    </section>
+
+    <!-- ============ 闹钟 ============ -->
+    <section class="page" id="page-alarm">
+      <div class="page-title">闹钟</div>
+      <div class="page-desc">拖动表盘，设置目标起床与唤醒区间</div>
+
+      <div class="dial-wrap">
+        <div class="clock-face" id="clock-face">
+          <svg class="wake-svg" viewBox="0 0 300 300">
+            <path id="wake-arc" fill="none" stroke-opacity=".18" stroke-linecap="round"/>
+          </svg>
+          <div class="hand hand-early" id="hand-early"></div>
+          <div class="hand hand-target" id="hand-target"></div>
+          <div class="hand hand-late" id="hand-late"></div>
+          <div class="center-pin"></div>
+          <div class="dial-center">
+            <div class="t" id="dial-time">07:30</div>
+            <div class="l">目标起床</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="summary">
+        <div class="goal" id="sum-goal">目标 07:30</div>
+        <div class="rec" id="sum-rec">建议 07:12</div>
+        <div class="reason">该时间落在浅睡阶段，唤醒更轻松</div>
+      </div>
+
+      <div class="card">
+        <h3>唤醒区间</h3>
+        <div class="hint">实心指针 = 目标时间 · 空心指针 = 可接受范围</div>
+        <div class="range-legend">
+          <span><i class="dot solid"></i>目标</span>
+          <span><i class="dot hollow"></i>最早（提前）</span>
+          <span><i class="dot hollow coral"></i>最晚（延后）</span>
+        </div>
+        <div class="range-labels"><span id="range-early">提前 30 分</span><span>目标</span><span id="range-late">延后 30 分</span></div>
+      </div>
+
+      <button class="btn" id="btn-manual">手动设置时间</button>
+      <button class="btn primary" id="btn-alarm">开启闹钟</button>
+    </section>
+
+    <!-- ============ 我的 ============ -->
+    <section class="page" id="page-profile">
+      <div class="page-title">设置</div>
+      <div class="page-desc">连接、通知和数据来源</div>
+
+      <div class="card" style="margin-top:18px">
+        <div class="setting">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.6-9.5-9A5.5 5.5 0 0 1 12 6.5 5.5 5.5 0 0 1 21.5 12C19 16.4 12 21 12 21z"/></svg></div>
+          <div><div class="tt">华为运动健康</div><div class="dd">已连接 · 最近同步 今天 07:45</div></div>
+          <div class="st">已连接</div>
+        </div>
+        <div class="rule" style="margin:2px 0"></div>
+        <div class="setting">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9z"/><path d="M10 21h4"/></svg></div>
+          <div><div class="tt">通知</div><div class="dd">本机闹钟需要系统通知权限</div></div>
+        </div>
+        <div class="rule" style="margin:2px 0"></div>
+        <div class="setting">
+          <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg></div>
+          <div><div class="tt">数据来源</div><div class="dd">睡眠阶段为设备估算</div></div>
+        </div>
+      </div>
+
+      <div class="section-head"><h2>主题配色</h2><span>选择你喜欢的配色</span></div>
+      <div class="rule"></div>
+      <div class="theme-grid">
+        <div class="theme-opt active" data-theme="purple"><span class="swatch" style="--c:#6d5dfc"></span><span class="name">现在的</span></div>
+        <div class="theme-opt" data-theme="macaron"><span class="swatch" style="--c:#E89AB4"></span><span class="name">马卡龙</span></div>
+        <div class="theme-opt" data-theme="green"><span class="swatch" style="--c:#4E9B74"></span><span class="name">绿色系</span></div>
+        <div class="theme-opt" data-theme="grey"><span class="swatch" style="--c:#7A8494"></span><span class="name">灰色系</span></div>
+        <div class="theme-opt" data-theme="night"><span class="swatch" style="--c:#2b2f3d"></span><span class="name">黑夜</span></div>
+      </div>
+
+      <div class="section-head"><h2>使用说明</h2><span>请按日常参考使用</span></div>
+      <div class="rule"></div>
+      <div class="page-desc" style="margin-top:12px;line-height:1.7">阶段数据不能替代医学诊断。窗口内没有可用阶段时，闹钟按目标时间触发。</div>
+    </section>
+  </main>
+
+  <nav>
+    <div class="nav-item active" data-tab="tonight">
+      <svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>
+      <span>今晚</span>
+    </div>
+    <div class="nav-item" data-tab="insights">
+      <svg viewBox="0 0 24 24"><path d="M3 20h18M6 16l4-5 3 3 5-7"/></svg>
+      <span>趋势</span>
+    </div>
+    <div class="nav-item" data-tab="alarm">
+      <svg viewBox="0 0 24 24"><path d="M12 8v4l2.5 2.5M6 3a9 9 0 1 0 12 0"/></svg>
+      <span>闹钟</span>
+    </div>
+    <div class="nav-item" data-tab="profile">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>
+      <span>我的</span>
+    </div>
+  </nav>
+</div>
+
+<script>
+(function(){
+  const $ = sel => document.querySelector(sel);
+  const CX = 150, CY = 150, R = 138;
+
+  // ===== 页面切换 =====
+  const TITLES = { tonight:'昨夜', insights:'趋势', alarm:'闹钟', profile:'设置' };
+  function switchTab(tab){
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    $('#page-' + tab).classList.add('active');
+    document.querySelector('.nav-item[data-tab="' + tab + '"]').classList.add('active');
+    $('#header-sub').textContent = TITLES[tab];
+    $('#page-' + tab).parentElement.scrollTop = 0;
+  }
+  document.querySelectorAll('.nav-item').forEach(n => {
+    n.addEventListener('click', () => switchTab(n.dataset.tab));
+  });
+  $('#go-alarm').addEventListener('click', () => switchTab('alarm'));
+
+  // ===== 主题切换（含黑夜模式，缓缓变暗）=====
+  const LIGHT_THEMES = ['purple', 'macaron', 'green', 'grey'];
+  let lastLight = 'purple';
+  function applyTheme(name){
+    document.documentElement.setAttribute('data-theme', name);
+    if (LIGHT_THEMES.includes(name)) lastLight = name;
+    document.querySelectorAll('.theme-opt').forEach(o => o.classList.toggle('active', o.dataset.theme === name));
+  }
+  $('#dark-btn').addEventListener('click', () => {
+    const cur = document.documentElement.getAttribute('data-theme') || 'purple';
+    applyTheme(cur === 'night' ? lastLight : 'night');
+  });
+  document.querySelectorAll('.theme-opt').forEach(o => o.addEventListener('click', () => applyTheme(o.dataset.theme)));
+  applyTheme(document.documentElement.getAttribute('data-theme') || 'purple');
+
+  // ===== 今晚：睡眠时间轴 =====
+  const segs = [
+    ['light',90],['deep',30],['light',55],['rem',25],['light',45],
+    ['deep',20],['rem',20],['light',95],['deep',32],['rem',28]
+  ];
+  const track = $('#sleep-track');
+  const totalMin = segs.reduce((s,x) => s + x[1], 0);   // 440
+  segs.forEach(([kind, m]) => {
+    const el = document.createElement('div');
+    el.className = 'seg ' + kind;
+    el.style.width = (m / totalMin * 100) + '%';
+    track.appendChild(el);
+  });
+  // 建议唤醒点：约在 82% 位置
+  const mark = document.createElement('div');
+  mark.className = 'wake-mark'; mark.style.left = '82%';
+  const tag = document.createElement('div');
+  tag.className = 'wake-tag'; tag.textContent = '建议唤醒'; tag.style.left = '82%';
+  track.appendChild(mark); track.appendChild(tag);
+
+  // ===== 闹钟：表盘（Uiverse 风格，12 小时）=====
+  const state = { target: 7*60 + 30, early: 30, late: 30, on: false };
+  const face = $('#clock-face');
+  const deg12 = m => ((m % 720) + 720) % 720 * 0.5;
+  const rad12 = m => deg12(m) * Math.PI / 180;
+  const pt12  = (m, r) => [150 + r * Math.sin(rad12(m)), 150 - r * Math.cos(rad12(m))];
+  const minuteFromPoint = (x, y) => {
+    const dx = x - 150, dy = y - 150;
+    let a = Math.atan2(dx, -dy) * 180 / Math.PI;
+    a = (a + 360) % 360;
+    return Math.round(a * 2 / 5) * 5;   // 12h：1° = 2 分钟，取整到 5 分钟
+  };
+  const fmt = m => {
+    m = ((m % 1440) + 1440) % 1440;
+    return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
+  };
+
+  // 12 个刻度点
+  for (let i = 0; i < 12; i++) {
+    const m = document.createElement('div');
+    m.className = 'marker' + (i % 3 === 0 ? ' major' : '');
+    m.style.transform = 'rotate(' + (i * 30) + 'deg)';
+    const dot = document.createElement('div');
+    dot.className = 'marker-dot';
+    m.appendChild(dot);
+    face.appendChild(m);
+  }
+  // 12 个数字
+  for (let i = 1; i <= 12; i++) {
+    const n = document.createElement('div');
+    n.className = 'number';
+    n.style.transform = 'rotate(' + (i * 30) + 'deg)';
+    const span = document.createElement('span');
+    span.textContent = i;
+    span.style.transform = 'translateY(35px) rotate(' + (-i * 30) + 'deg)';
+    n.appendChild(span);
+    face.appendChild(n);
+  }
+
+  function arcPath(a, b) {
+    const sweep = ((b - a + 720) % 720) * 0.5;
+    const r = 108;
+    const p0 = pt12(a, r), p1 = pt12(b, r);
+    const large = sweep > 180 ? 1 : 0;
+    return `M ${p0[0]} ${p0[1]} A ${r} ${r} 0 ${large} 1 ${p1[0]} ${p1[1]}`;
+  }
+
+  function setHand(id, m) {
+    $('#' + id).style.transform = 'translateX(-50%) rotate(' + deg12(m) + 'deg)';
+  }
+
+  function render() {
+    const t = state.target, s = t - state.early, e = t + state.late;
+    $('#wake-arc').setAttribute('d', arcPath(s, e));
+    setHand('hand-target', t);
+    setHand('hand-early', s);
+    setHand('hand-late', e);
+    $('#dial-time').textContent = fmt(t);
+    $('#sum-goal').textContent = '目标 ' + fmt(t);
+    $('#sum-rec').textContent = '建议 ' + fmt(((t - 18) + 720) % 720);
+    $('#range-early').textContent = '提前 ' + state.early + ' 分';
+    $('#range-late').textContent = '延后 ' + state.late + ' 分';
+  }
+
+  // 拖动
+  let active = null;
+  const handTips = {
+    'hand-target': () => pt12(state.target, 72),
+    'hand-early':  () => pt12(state.target - state.early, 94),
+    'hand-late':   () => pt12(state.target + state.late, 94)
+  };
+  function pickHandle(x, y) {
+    let best = null, bd = 1e9;
+    for (const [id, fn] of Object.entries(handTips)) {
+      const p = fn();
+      const d = (p[0]-x)**2 + (p[1]-y)**2;
+      if (d < bd) { bd = d; best = id; }
+    }
+    return bd < 34*34 ? best : null;
+  }
+  face.addEventListener('pointerdown', e => {
+    const r = face.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width * 300;
+    const y = (e.clientY - r.top) / r.height * 300;
+    active = pickHandle(x, y);
+    if (active) { face.setPointerCapture(e.pointerId); face.style.cursor = 'grabbing'; }
+  });
+  face.addEventListener('pointermove', e => {
+    if (!active) return;
+    const r = face.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width * 300;
+    const y = (e.clientY - r.top) / r.height * 300;
+    const m = minuteFromPoint(x, y);
+    if (active === 'hand-target') state.target = m;
+    else if (active === 'hand-early') state.early = Math.min(90, Math.max(5, ((state.target - m + 720) % 720)));
+    else if (active === 'hand-late') state.late = Math.min(90, Math.max(5, ((m - state.target + 720) % 720)));
+    render();
+  });
+  face.addEventListener('pointerup', () => { active = null; face.style.cursor = 'grab'; });
+
+  // 按钮
+  $('#btn-alarm').addEventListener('click', () => {
+    state.on = !state.on;
+    const b = $('#btn-alarm');
+    b.textContent = state.on ? '闹钟已开启 · ' + fmt(state.target) : '开启闹钟';
+    b.classList.toggle('on', state.on);
+    // 原生桥接：真实设置/取消系统闹钟（浏览器预览时无此对象，忽略）
+    try {
+      if (window.AndroidAlarm) {
+        if (state.on) window.AndroidAlarm.scheduleAlarm(Math.floor(state.target / 60), state.target % 60);
+        else window.AndroidAlarm.cancelAlarm();
+      }
+    } catch (e) { /* 无桥接环境 */ }
+  });
+  $('#btn-manual').addEventListener('click', () => { state.target = (state.target + 15) % 720; render(); });
+
+  render();
+})();
+</script>
+</body>
+</html>
